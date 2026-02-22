@@ -131,6 +131,17 @@ dotnet run --project src/ggLang.CLI -- run examples/hello.gg    # Build & run
 - Group changes under: Added, Changed, Fixed, Removed, Deprecated.
 - Always use the format: `## [version]`
 
+## Version Synchronization
+
+When updating the project version, update all version declarations in the same PR:
+
+- `src/ggLang.CLI/Program.cs` (`Version` constant used by `gg version`)
+- `Makefile` install banner version
+- `build.sh` `VERSION` variable
+- `CHANGELOG.md` version header
+
+Never leave these files with different version values.
+
 ## Commit Message Rules
 
 All commit messages must follow the **Conventional Commits** specification. This ensures consistency and clarity in the commit history.

@@ -61,7 +61,7 @@ publish:
 ## Install gg compiler to $(PREFIX) (requires sudo)
 install: publish
 	@echo ""
-	@echo "=== Installing ggLang v0.6.0-beta ==="
+	@echo "=== Installing ggLang v0.9.2 ==="
 	@echo "  Binary:  $(BINDIR)/gg"
 	@echo "  Runtime: $(RUNTIME_DIR)/"
 	@echo "  Libs:    $(LIBS_DIR)/"

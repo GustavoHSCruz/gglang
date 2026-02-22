@@ -7,7 +7,7 @@
 
 set -e
 
-VERSION="0.5.0-beta"
+VERSION="0.9.2"
 PREFIX="${GG_PREFIX:-/usr/local}"
 BINDIR="$PREFIX/bin"
 LIBDIR="$PREFIX/lib/gglang"

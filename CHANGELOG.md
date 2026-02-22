@@ -6,6 +6,13 @@ Format: [version] - YYYY-MM-DD
 
 ---
 
+## [0.9.2] - 2026-02-22 02:00
+
+### Changed
+
+- Synchronized project version strings to `0.9.2` across CLI (`gg version`), `Makefile`, and `build.sh`.
+- Added explicit version-synchronization rules to `AGENTS.md` and `.github/copilot-instructions.md` to prevent mismatched release/version labels.
+
 ## [0.9.1] - 2026-02-22 01:43
 
 ### Added

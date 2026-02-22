@@ -12,7 +12,7 @@ namespace ggLang.CLI;
 /// </summary>
 public class Program
 {
-    private const string Version = "0.6.0-beta";
+    private const string Version = "0.9.2";
     private const string Language = "ggLang";
 
     /// <summary>

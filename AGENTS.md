@@ -113,6 +113,18 @@ Required format:
 - Groups: `Added`, `Changed`, `Fixed`, `Removed`, `Deprecated`
 - Use system date/time (`date` command).
 
+## Version Synchronization Rule
+
+Whenever the project version changes, keep all version declarations synchronized in
+the same change:
+
+- `src/ggLang.CLI/Program.cs` (`Version` constant shown by `gg version`)
+- `Makefile` install banner version
+- `build.sh` `VERSION` variable
+- `CHANGELOG.md` version header
+
+Do not release with mismatched version strings across these files.
+
 ## Commit Message Rule
 
 Use Conventional Commits:
