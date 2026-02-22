@@ -42,3 +42,8 @@ gg pkg list
 
 - Standard libraries use `[@Library("Name", "Version")]` annotations.
 - `.lib.gg` files are not intended as direct entry-point compilation targets.
+- Libraries installed via `make install`, `build.sh install`, or `gg pkg install` are marked read-only.
+- On Linux/macOS, the installer/CLI also attempts immutable flags (`chattr +i` / `chflags uchg`) for stronger protection.
+- To edit a locked local library manually, unlock first:
+  - Linux: `chattr -i libs/YourLib.lib.gg && chmod u+w libs/YourLib.lib.gg`
+  - macOS: `chflags nouchg libs/YourLib.lib.gg && chmod u+w libs/YourLib.lib.gg`

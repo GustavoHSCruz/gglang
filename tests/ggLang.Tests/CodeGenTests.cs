@@ -11,7 +11,7 @@ namespace ggLang.Tests;
 /// </summary>
 public class CodeGenTests
 {
-    private string GenerateC(string source)
+    private string GenerateC(string source, long memoryLimit = 0, bool noGc = false)
     {
         var lexer = new GgLexer(source);
         var tokens = lexer.Tokenize();
@@ -24,7 +24,7 @@ public class CodeGenTests
         var analyzer = new SemanticAnalyzer();
         analyzer.Analyze(unit);
 
-        var codegen = new CCodeGenerator(analyzer);
+        var codegen = new CCodeGenerator(analyzer, memoryLimit, noGc);
         return codegen.Generate(unit);
     }
 
@@ -141,6 +141,76 @@ public class CodeGenTests
         // Static methods should not have a self parameter
         Assert.Contains("void App_main()", code);
         Assert.DoesNotContain("App_main(App* self)", code);
+    }
+
+    [Fact]
+    public void GeneratedCode_UsesGcRootFrames()
+    {
+        var code = GenerateC(@"
+            class Program {
+                static void main() {
+                    Console.writeLine(""ok"");
+                }
+            }
+        ");
+
+        Assert.Contains("gg_gc_push_root_frame()", code);
+        Assert.Contains("gg_gc_pop_root_frame(__gg_gc_frame)", code);
+    }
+
+    [Fact]
+    public void GeneratedCode_AutoRegistersReferenceRoots()
+    {
+        var code = GenerateC(@"
+            class Node {
+                Node next;
+
+                void link(Node n) {
+                    Node local = n;
+                    this.next = local;
+                }
+            }
+        ");
+
+        Assert.Contains("gg_gc_add_root(&self);", code);
+        Assert.Contains("gg_gc_add_root(&n);", code);
+        Assert.Contains("gg_gc_add_root(&local);", code);
+    }
+
+    [Fact]
+    public void GeneratedCode_ProgramMainSetsMemoryLimitAndStaticRoots()
+    {
+        var code = GenerateC(@"
+            class Cache {
+                static Cache global;
+            }
+
+            class Program {
+                static void main() {
+                    Console.writeLine(""ok"");
+                }
+            }
+        ", memoryLimit: 1);
+
+        Assert.Contains("#define GG_MEMORY_LIMIT 1L", code);
+        Assert.Contains("gg_gc_set_memory_limit((size_t)GG_MEMORY_LIMIT);", code);
+        Assert.Contains("gg_gc_add_root(&Cache_global);", code);
+    }
+
+    [Fact]
+    public void GeneratedCode_UsesWriteBarrierForReferenceAssignments()
+    {
+        var code = GenerateC(@"
+            class Node {
+                Node next;
+
+                void link(Node n) {
+                    this.next = n;
+                }
+            }
+        ");
+
+        Assert.Contains("gg_gc_write_barrier((void**)&(self->next), (void*)(n));", code);
     }
 
     // ==========================================

@@ -54,7 +54,7 @@ public class EndToEndTests : IDisposable
         }
     }
 
-    private (int ExitCode, string Output) CompileAndRun(string source)
+    private (int ExitCode, string Output) CompileAndRun(string source, long memoryLimit = 0, bool noGc = false)
     {
         // Lex
         var lexer = new GgLexer(source);
@@ -73,7 +73,7 @@ public class EndToEndTests : IDisposable
         analyzer.Analyze(unit);
 
         // Generate C
-        var codegen = new CCodeGenerator(analyzer);
+        var codegen = new CCodeGenerator(analyzer, memoryLimit, noGc);
         var cCode = codegen.Generate(unit);
 
         // Write C file
@@ -319,5 +319,58 @@ public class EndToEndTests : IDisposable
 
         Assert.Equal(0, exitCode);
         Assert.Contains("42", output);
+    }
+
+    [Fact]
+    public void GcRoots_LocalReferenceSurvivesHeavyAllocations()
+    {
+        if (!_gccAvailable) return;
+
+        var (exitCode, output) = CompileAndRun(@"
+            class Box {
+                int value;
+                Box(int value) {
+                    this.value = value;
+                }
+            }
+
+            class Program {
+                static void main() {
+                    Box last = new Box(777);
+                    for (int i = 0; i < 6000; i++) {
+                        Box tmp = new Box(i);
+                    }
+                    Console.writeLine(last.value);
+                }
+            }
+        ");
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("777", output);
+    }
+
+    [Fact]
+    public void MemoryLimit_ExitsWith137WhenExceeded()
+    {
+        if (!_gccAvailable) return;
+
+        var (exitCode, output) = CompileAndRun(@"
+            class Box {
+                int value;
+                Box(int value) {
+                    this.value = value;
+                }
+            }
+
+            class Program {
+                static void main() {
+                    Box box = new Box(1);
+                    Console.writeLine(box.value);
+                }
+            }
+        ", memoryLimit: 1);
+
+        Assert.Equal(137, exitCode);
+        Assert.Contains("memory limit exceeded", output, StringComparison.OrdinalIgnoreCase);
     }
 }

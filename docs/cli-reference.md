@@ -84,8 +84,8 @@ Use `gg pkg` to manage project-local libraries.
 | `gg pkg init` | Create `gg.json` manifest |
 | `gg pkg install <name> [version]` | Install package (currently standard libs/local sources) |
 | `gg pkg list` | List installed libraries in local `libs/` |
-| `gg pkg remove <name>` | Remove a local library |
-| `gg pkg update` | Update local libraries from available standard lib sources |
+| `gg pkg remove <name>` | Remove a local library (auto-unlocks locked libs first) |
+| `gg pkg update` | Update local libraries from available standard lib sources (auto unlock/relock) |
 | `gg pkg search [query]` | Search available package names |
 | `gg pkg publish` | Placeholder until registry is available |
 
@@ -96,6 +96,13 @@ Supported aliases:
 - `remove`: `rm`, `uninstall`
 - `update`: `upgrade`
 - `search`: `find`
+
+Behavior notes:
+
+- Installed `.lib.gg` files are forced to read-only.
+- On Linux/macOS, CLI attempts immutable lock (`chattr +i` / `chflags uchg`) when available.
+- `gg pkg update` and `gg pkg remove` automatically unlock and relock files as needed.
+- Set `GG_STDLIB_DIR` to override standard-library source lookup (useful for tests/custom installs).
 
 ## Project Configuration Files
 

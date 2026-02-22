@@ -2,6 +2,7 @@ using ggLang.Compiler.Lexer;
 using ggLang.Compiler.Parser;
 using ggLang.Compiler.Analysis;
 using ggLang.Compiler.CodeGen;
+using System.Diagnostics;
 
 namespace ggLang.CLI;
 
@@ -37,6 +38,14 @@ public class Program
         foreach (var libDir in StdLibPaths)
         {
             if (fullPath.StartsWith(libDir, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        var envLibDir = Environment.GetEnvironmentVariable("GG_STDLIB_DIR");
+        if (!string.IsNullOrWhiteSpace(envLibDir))
+        {
+            var envFull = Path.GetFullPath(envLibDir);
+            if (fullPath.StartsWith(envFull, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 
@@ -886,6 +895,7 @@ Examples:
                 Directory.CreateDirectory(localLibs);
                 var dest = Path.Combine(localLibs, $"{packageName}.lib.gg");
                 File.Copy(libFile, dest, overwrite: true);
+                LockLibraryFile(dest);
 
                 // Update manifest if exists
                 UpdateManifestDependency(packageName, version);
@@ -979,7 +989,17 @@ Examples:
             return 1;
         }
 
-        File.Delete(libFile);
+        try
+        {
+            UnlockLibraryFile(libFile);
+            File.Delete(libFile);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"\u001b[31merror\u001b[0m: failed to remove '{packageName}': {ex.Message}");
+            return 1;
+        }
+
         Console.WriteLine($"\u001b[32m[pkg]\u001b[0m removed {packageName}");
         Console.WriteLine($"  Deleted libs/{packageName}.lib.gg");
         Console.WriteLine();
@@ -1012,10 +1032,20 @@ Examples:
 
                 if (sourceMod > localMod)
                 {
-                    File.Copy(sourceLib, localLib, overwrite: true);
-                    var libName = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(name));
-                    Console.WriteLine($"  \u001b[32m↑\u001b[0m updated {libName}");
-                    updated++;
+                    try
+                    {
+                        UnlockLibraryFile(localLib);
+                        File.Copy(sourceLib, localLib, overwrite: true);
+                        LockLibraryFile(localLib);
+                        var libName = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(name));
+                        Console.WriteLine($"  \u001b[32m↑\u001b[0m updated {libName}");
+                        updated++;
+                    }
+                    catch (Exception ex)
+                    {
+                        var libName = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(name));
+                        Console.Error.WriteLine($"  \u001b[31m!\u001b[0m failed to update {libName}: {ex.Message}");
+                    }
                 }
             }
         }
@@ -1096,6 +1126,10 @@ Examples:
 
     private static string? FindLibsDir()
     {
+        var envLibDir = Environment.GetEnvironmentVariable("GG_STDLIB_DIR");
+        if (!string.IsNullOrWhiteSpace(envLibDir) && Directory.Exists(envLibDir))
+            return Path.GetFullPath(envLibDir);
+
         // Check standard locations
         var candidates = new[]
         {
@@ -1152,8 +1186,152 @@ Examples:
         {
             var dest = Path.Combine(localLibs, Path.GetFileName(lib));
             File.Copy(lib, dest, overwrite: true);
+            LockLibraryFile(dest);
             var name = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(lib));
             Console.WriteLine($"  \u001b[32m+\u001b[0m {name}");
+        }
+    }
+
+    private static void LockLibraryFile(string filePath)
+    {
+        if (!File.Exists(filePath)) return;
+
+        try
+        {
+            SetLibraryReadOnly(filePath);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"  \u001b[33mwarning\u001b[0m: could not mark '{Path.GetFileName(filePath)}' as read-only ({ex.Message})");
+            return;
+        }
+
+        if (!TrySetImmutableFlag(filePath, immutable: true, out var lockError) &&
+            !string.IsNullOrWhiteSpace(lockError))
+        {
+            Console.Error.WriteLine($"  \u001b[33mwarning\u001b[0m: {lockError}");
+        }
+    }
+
+    private static void UnlockLibraryFile(string filePath)
+    {
+        if (!File.Exists(filePath)) return;
+
+        if (!TrySetImmutableFlag(filePath, immutable: false, out var unlockError) &&
+            !string.IsNullOrWhiteSpace(unlockError))
+        {
+            Console.Error.WriteLine($"  \u001b[33mwarning\u001b[0m: {unlockError}");
+        }
+
+        try
+        {
+            SetLibraryWritable(filePath);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"  \u001b[33mwarning\u001b[0m: could not make '{Path.GetFileName(filePath)}' writable ({ex.Message})");
+        }
+    }
+
+    private static void SetLibraryReadOnly(string filePath)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var attrs = File.GetAttributes(filePath);
+            File.SetAttributes(filePath, attrs | FileAttributes.ReadOnly);
+            return;
+        }
+
+        try
+        {
+            File.SetUnixFileMode(filePath, UnixFileMode.UserRead | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+        }
+        catch
+        {
+            var attrs = File.GetAttributes(filePath);
+            File.SetAttributes(filePath, attrs | FileAttributes.ReadOnly);
+        }
+    }
+
+    private static void SetLibraryWritable(string filePath)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var attrs = File.GetAttributes(filePath);
+            File.SetAttributes(filePath, attrs & ~FileAttributes.ReadOnly);
+            return;
+        }
+
+        try
+        {
+            File.SetUnixFileMode(filePath,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+        }
+        catch
+        {
+            var attrs = File.GetAttributes(filePath);
+            File.SetAttributes(filePath, attrs & ~FileAttributes.ReadOnly);
+        }
+    }
+
+    private static bool TrySetImmutableFlag(string filePath, bool immutable, out string? error)
+    {
+        error = null;
+
+        if (OperatingSystem.IsLinux())
+        {
+            var op = immutable ? "+i" : "-i";
+            if (TryRunCommand("chattr", new[] { op, filePath }, out var output))
+                return true;
+            error = $"could not {(immutable ? "lock" : "unlock")} '{Path.GetFileName(filePath)}' with chattr ({output})";
+            return false;
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            var op = immutable ? "uchg" : "nouchg";
+            if (TryRunCommand("chflags", new[] { op, filePath }, out var output))
+                return true;
+            error = $"could not {(immutable ? "lock" : "unlock")} '{Path.GetFileName(filePath)}' with chflags ({output})";
+            return false;
+        }
+
+        error = null; // immutable flags are optional on other platforms
+        return false;
+    }
+
+    private static bool TryRunCommand(string fileName, IEnumerable<string> args, out string output)
+    {
+        output = "";
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = fileName,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            foreach (var arg in args)
+                process.StartInfo.ArgumentList.Add(arg);
+
+            process.Start();
+            var stdout = process.StandardOutput.ReadToEnd();
+            var stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            output = (stdout + stderr).Trim();
+            return process.ExitCode == 0;
+        }
+        catch (Exception ex)
+        {
+            output = ex.Message;
+            return false;
         }
     }
 

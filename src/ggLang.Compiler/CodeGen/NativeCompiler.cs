@@ -45,6 +45,10 @@ public sealed class NativeCompiler
         {
             args += " -lws2_32";
         }
+        else
+        {
+            args += " -pthread";
+        }
 
         if (optimize)
             args += " -O2";

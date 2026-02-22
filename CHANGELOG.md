@@ -6,6 +6,32 @@ Format: [version] - YYYY-MM-DD
 
 ---
 
+## [0.9.1] - 2026-02-22 01:43
+
+### Added
+
+- **GC root frame APIs** — `gg_gc_push_root_frame()` and `gg_gc_pop_root_frame()` were added to the runtime (`gg_runtime.h/.c`) to support scoped automatic root management in generated C.
+- **Write barrier hook API** — `gg_gc_write_barrier(void** slot, void* new_value)` was added as a runtime hook for future incremental/generational GC evolution (current behavior is passthrough assignment).
+- **Automatic root emission in codegen** — methods/constructors now emit GC frame setup/teardown and auto-register roots for reference locals/parameters (`self` included for instance members).
+- **Package lock helpers in CLI** — package operations now include internal lock/unlock helpers for `.lib.gg` files (read-only always, immutable flag attempts on Linux/macOS).
+- **`GG_STDLIB_DIR` override** — CLI standard library discovery now supports `GG_STDLIB_DIR` as first-priority source directory.
+- **New tests** — added codegen coverage for GC frames/roots/memory-limit bootstrap/write-barrier, end-to-end GC regression and memory-limit tests, and package-manager lock/update/remove tests.
+
+### Changed
+
+- **GC runtime synchronization** — GC mutable state operations are now guarded by a global mutex (`CRITICAL_SECTION` on Windows, `pthread_mutex_t` on POSIX) to reduce race-condition risk.
+- **Native compiler flags** — POSIX native compilation now links with `-pthread` to support runtime mutex usage.
+- **`Program_main` bootstrap** — generated `Program_main` now applies `GG_MEMORY_LIMIT` at runtime (`gg_gc_set_memory_limit`) and registers static reference fields as GC roots.
+- **`for` codegen for reference declarations** — `for` initializers with reference variable declarations are emitted in a scoped block with explicit root registration.
+- **Install scripts lock libraries** — `Makefile` and `build.sh` now set installed `.lib.gg` files to read-only and attempt immutable locking; uninstall removes immutable flags first.
+- **Package update/remove flow** — `gg pkg update` and `gg pkg remove` now auto-unlock/relock files as needed.
+
+### Fixed
+
+- **GC correctness bug with local references** — fixed a real-world corruption scenario where reachable objects could be collected due to missing automatic roots in generated code.
+- **Runtime memory limit not applied in generated programs** — fixed by emitting memory-limit bootstrap call in generated `Program_main`.
+- **Installed standard libraries remained editable** — local and global installed `.lib.gg` files are now hardened as read-only with immutable-flag attempts where available.
+
 ## [0.9.0] - 2026-02-21 02:27
 
 ### Added

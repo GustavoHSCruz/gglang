@@ -20,11 +20,14 @@ public sealed class CCodeGenerator
     private string? _currentClassName;
     private int _indentLevel;
     private HashSet<string> _currentParameters = [];
+    private readonly Dictionary<string, string> _currentParameterTypes = [];
     private readonly Dictionary<string, string> _localVarTypes = [];  // varName → typeName
     private readonly HashSet<string> _forwardDeclaredVtables = [];
     private readonly HashSet<string> _emittedVtableMembers = [];
     private readonly long _memoryLimit; // Memory limit in bytes (0 = unlimited)
     private readonly bool _noGc;        // Whether GC is disabled (manual memory mode)
+    private const string GcFrameVar = "__gg_gc_frame";
+    private bool _gcFrameActive;
 
     public CCodeGenerator(SemanticAnalyzer analyzer, long memoryLimit = 0, bool noGc = false)
     {
@@ -92,6 +95,17 @@ public sealed class CCodeGenerator
             if (typeDecl is ClassDeclaration classDecl)
             {
                 _structs.AppendLine($"extern {classDecl.Name}_VTable {classDecl.Name}_vtable_instance;");
+            }
+        }
+        foreach (var typeDecl in unit.TypeDeclarations)
+        {
+            if (typeDecl is not ClassDeclaration classDecl) continue;
+            foreach (var member in classDecl.Members)
+            {
+                if (member is FieldDeclaration field && field.IsStatic)
+                {
+                    _structs.AppendLine($"extern {MapType(field.Type)} {classDecl.Name}_{field.Name};");
+                }
             }
         }
         _structs.AppendLine();
@@ -271,11 +285,16 @@ public sealed class CCodeGenerator
         var paramList = method.IsStatic ? "" : $"{classDecl.Name}* self";
 
         _localVarTypes.Clear();
+        _currentParameterTypes.Clear();
+        if (!method.IsStatic)
+            _localVarTypes["self"] = classDecl.Name;
+
         foreach (var param in method.Parameters)
         {
             if (paramList.Length > 0) paramList += ", ";
             paramList += $"{MapType(param.Type)} {param.Name}";
             _currentParameters.Add(param.Name);
+            _currentParameterTypes[param.Name] = param.Type.Name;
             _localVarTypes[param.Name] = param.Type.Name;
         }
 
@@ -291,12 +310,31 @@ public sealed class CCodeGenerator
         {
             _implementations.AppendLine($"{returnType} {funcName}({paramList}) {{");
             _indentLevel = 1;
+
+            BeginGcFrame();
+            if (!method.IsStatic)
+                Emit("gg_gc_add_root(&self);");
+
+            foreach (var param in method.Parameters)
+            {
+                if (IsReferenceType(param.Type))
+                    Emit($"gg_gc_add_root(&{param.Name});");
+            }
+
+            if (IsProgramMainMethod(classDecl, method))
+            {
+                EmitProgramMainBootstrap();
+            }
+
             GenerateBlock(method.Body);
+            EndGcFrame();
             _implementations.AppendLine("}");
             _implementations.AppendLine();
         }
 
         _currentParameters = [];
+        _currentParameterTypes.Clear();
+        _localVarTypes.Clear();
     }
 
     private void GenerateConstructor(ClassDeclaration classDecl, ConstructorDeclaration ctor)
@@ -304,10 +342,14 @@ public sealed class CCodeGenerator
         var paramList = $"{classDecl.Name}* self";
 
         _localVarTypes.Clear();
+        _currentParameterTypes.Clear();
+        _localVarTypes["self"] = classDecl.Name;
+
         foreach (var param in ctor.Parameters)
         {
             paramList += $", {MapType(param.Type)} {param.Name}";
             _currentParameters.Add(param.Name);
+            _currentParameterTypes[param.Name] = param.Type.Name;
             _localVarTypes[param.Name] = param.Type.Name;
         }
 
@@ -319,6 +361,14 @@ public sealed class CCodeGenerator
         // Implementation
         _implementations.AppendLine($"void {funcName}({paramList}) {{");
         _indentLevel = 1;
+
+        BeginGcFrame();
+        Emit("gg_gc_add_root(&self);");
+        foreach (var param in ctor.Parameters)
+        {
+            if (IsReferenceType(param.Type))
+                Emit($"gg_gc_add_root(&{param.Name});");
+        }
 
         // Base constructor call first
         if (ctor.BaseArguments != null && classDecl.BaseClass != null)
@@ -345,9 +395,12 @@ public sealed class CCodeGenerator
             GenerateBlock(ctor.Body);
         }
 
+        EndGcFrame();
         _implementations.AppendLine("}");
         _implementations.AppendLine();
         _currentParameters = [];
+        _currentParameterTypes.Clear();
+        _localVarTypes.Clear();
     }
 
     /// <summary>
@@ -574,6 +627,7 @@ public sealed class CCodeGenerator
                 break;
 
             case ReturnStatement retStmt:
+                EmitRootFramePopBeforeReturn();
                 if (retStmt.Value != null)
                     Emit($"return {GenerateExpression(retStmt.Value)};");
                 else
@@ -589,7 +643,10 @@ public sealed class CCodeGenerator
                 break;
 
             case ExpressionStatement exprStmt:
-                Emit($"{GenerateExpression(exprStmt.Expression)};");
+                if (TryGenerateWriteBarrier(exprStmt.Expression, out var barrierCall))
+                    Emit($"{barrierCall};");
+                else
+                    Emit($"{GenerateExpression(exprStmt.Expression)};");
                 break;
 
             case BlockStatement block:
@@ -614,10 +671,12 @@ public sealed class CCodeGenerator
     {
         string cType;
         string typeName;
+        bool isArray = false;
         if (varDecl.Type != null)
         {
             cType = MapType(varDecl.Type);
             typeName = varDecl.Type.Name;
+            isArray = varDecl.Type.IsArray;
         }
         else
         {
@@ -635,7 +694,15 @@ public sealed class CCodeGenerator
         }
         else
         {
-            Emit($"{cType} {varDecl.Name};");
+            if (IsReferenceTypeName(typeName, isArray))
+                Emit($"{cType} {varDecl.Name} = NULL;");
+            else
+                Emit($"{cType} {varDecl.Name};");
+        }
+
+        if (IsReferenceTypeName(typeName, isArray))
+        {
+            Emit($"gg_gc_add_root(&{varDecl.Name});");
         }
     }
 
@@ -664,12 +731,26 @@ public sealed class CCodeGenerator
     {
         // Convert to C-style for loop
         var init = "";
+        var hasForDecl = false;
+        var forDeclName = "";
+        var forDeclType = "";
+        var hasPreviousForDeclType = false;
+        string? previousForDeclType = null;
+        var forDeclIsReference = false;
+
         if (forStmt.Initializer is VariableDeclarationStatement varDecl)
         {
-            var cType = MapTypeName(varDecl.Type?.Name ?? InferCType(varDecl.Initializer));
+            hasForDecl = true;
+            forDeclName = varDecl.Name;
+            forDeclType = varDecl.Type?.Name ?? InferCType(varDecl.Initializer);
+            forDeclIsReference = IsReferenceTypeName(forDeclType, varDecl.Type?.IsArray ?? false);
+            var cType = varDecl.Type != null ? MapType(varDecl.Type) : MapTypeNameWithPointer(forDeclType);
             init = varDecl.Initializer != null
                 ? $"{cType} {varDecl.Name} = {GenerateExpression(varDecl.Initializer)}"
-                : $"{cType} {varDecl.Name}";
+                : forDeclIsReference ? $"{cType} {varDecl.Name} = NULL" : $"{cType} {varDecl.Name}";
+
+            hasPreviousForDeclType = _localVarTypes.TryGetValue(varDecl.Name, out previousForDeclType);
+            _localVarTypes[varDecl.Name] = forDeclType;
         }
         else if (forStmt.Initializer is ExpressionStatement initExpr)
         {
@@ -679,11 +760,36 @@ public sealed class CCodeGenerator
         var cond = forStmt.Condition != null ? GenerateExpression(forStmt.Condition) : "";
         var inc = forStmt.Increment != null ? GenerateExpression(forStmt.Increment) : "";
 
-        Emit($"for ({init}; {cond}; {inc}) {{");
-        _indentLevel++;
-        GenerateStatementBody(forStmt.Body);
-        _indentLevel--;
-        Emit("}");
+        if (hasForDecl && forDeclIsReference)
+        {
+            Emit("{");
+            _indentLevel++;
+            Emit($"{init};");
+            Emit($"gg_gc_add_root(&{forDeclName});");
+            Emit($"for (; {cond}; {inc}) {{");
+            _indentLevel++;
+            GenerateStatementBody(forStmt.Body);
+            _indentLevel--;
+            Emit("}");
+            _indentLevel--;
+            Emit("}");
+        }
+        else
+        {
+            Emit($"for ({init}; {cond}; {inc}) {{");
+            _indentLevel++;
+            GenerateStatementBody(forStmt.Body);
+            _indentLevel--;
+            Emit("}");
+        }
+
+        if (hasForDecl)
+        {
+            if (hasPreviousForDeclType && previousForDeclType != null)
+                _localVarTypes[forDeclName] = previousForDeclType;
+            else
+                _localVarTypes.Remove(forDeclName);
+        }
     }
 
     private void GenerateForEachStatement(ForEachStatement foreachStmt)
@@ -976,6 +1082,9 @@ public sealed class CCodeGenerator
         if (_localVarTypes.TryGetValue(varName, out var localType))
             return localType;
 
+        if (_currentParameterTypes.TryGetValue(varName, out var paramType))
+            return paramType;
+
         // Check fields
         if (_currentClassName != null && _analyzer.ClassTable.TryGetValue(_currentClassName, out var classInfo))
         {
@@ -1076,7 +1185,9 @@ public sealed class CCodeGenerator
 
         if (_currentParameters.Contains(id.Name))
         {
-            return "string";
+            if (_currentParameterTypes.TryGetValue(id.Name, out var paramType))
+                return paramType;
+            return "object";
         }
 
         if (_currentClassName != null && _analyzer.ClassTable.TryGetValue(_currentClassName, out var classInfo))
@@ -1426,6 +1537,154 @@ public sealed class CCodeGenerator
     {
         var args = string.Join(", ", obj.Arguments.Select(GenerateExpression));
         return $"{obj.TypeName}_create({args})";
+    }
+
+    private void BeginGcFrame()
+    {
+        _gcFrameActive = true;
+        Emit($"int {GcFrameVar} = gg_gc_push_root_frame();");
+    }
+
+    private void EndGcFrame()
+    {
+        if (!_gcFrameActive) return;
+        Emit($"gg_gc_pop_root_frame({GcFrameVar});");
+        _gcFrameActive = false;
+    }
+
+    private void EmitRootFramePopBeforeReturn()
+    {
+        if (!_gcFrameActive) return;
+        Emit($"gg_gc_pop_root_frame({GcFrameVar});");
+    }
+
+    private bool IsProgramMainMethod(ClassDeclaration classDecl, MethodDeclaration method)
+    {
+        return classDecl.Name == "Program" && method.IsStatic && method.Name == "main";
+    }
+
+    private void EmitProgramMainBootstrap()
+    {
+        Emit("#if defined(GG_MEMORY_LIMIT) && !defined(GG_NO_GC)");
+        Emit("gg_gc_set_memory_limit((size_t)GG_MEMORY_LIMIT);");
+        Emit("#endif");
+
+        foreach (var classDecl in _classDeclarations.Values)
+        {
+            foreach (var field in classDecl.Members.OfType<FieldDeclaration>())
+            {
+                if (!field.IsStatic) continue;
+                if (!IsReferenceType(field.Type)) continue;
+                Emit($"gg_gc_add_root(&{classDecl.Name}_{field.Name});");
+            }
+        }
+    }
+
+    private bool IsReferenceType(TypeReference typeRef)
+    {
+        return IsReferenceTypeName(typeRef.Name, typeRef.IsArray);
+    }
+
+    private static bool IsReferenceTypeName(string typeName, bool isArray = false)
+    {
+        if (isArray) return true;
+        if (typeName == "object") return true;
+        if (typeName == "string") return false;
+        return !IsBuiltinTypeName(typeName);
+    }
+
+    private bool TryGenerateWriteBarrier(Expression expression, out string barrierCall)
+    {
+        barrierCall = "";
+
+        if (expression is not AssignmentExpression assign || assign.Operator != "=")
+            return false;
+
+        if (!TryResolveExpressionTypeInfo(assign.Target, out var typeName, out var isArray))
+            return false;
+        if (!IsReferenceTypeName(typeName, isArray))
+            return false;
+
+        var target = GenerateExpression(assign.Target);
+        var value = GenerateExpression(assign.Value);
+        barrierCall = $"gg_gc_write_barrier((void**)&({target}), (void*)({value}))";
+        return true;
+    }
+
+    private bool TryResolveExpressionTypeInfo(Expression expression, out string typeName, out bool isArray)
+    {
+        typeName = "object";
+        isArray = false;
+
+        switch (expression)
+        {
+            case IdentifierExpression id:
+            {
+                var resolved = ResolveVariableType(id.Name);
+                if (resolved == null) return false;
+                typeName = resolved;
+                return true;
+            }
+
+            case ThisExpression:
+                if (_currentClassName == null) return false;
+                typeName = _currentClassName;
+                return true;
+
+            case ObjectCreationExpression objCreate:
+                typeName = objCreate.TypeName;
+                return true;
+
+            case CastExpression cast:
+                typeName = cast.TargetType.Name;
+                isArray = cast.TargetType.IsArray;
+                return true;
+
+            case ArrayCreationExpression arrCreate:
+                typeName = arrCreate.ElementType.Name;
+                isArray = true;
+                return true;
+
+            case MemberAccessExpression memberAccess:
+            {
+                if (memberAccess.Target is IdentifierExpression staticClassId &&
+                    _classDeclarations.TryGetValue(staticClassId.Name, out var staticClassDecl))
+                {
+                    var staticField = staticClassDecl.Members
+                        .OfType<FieldDeclaration>()
+                        .FirstOrDefault(f => f.IsStatic && f.Name == memberAccess.MemberName);
+                    if (staticField != null)
+                    {
+                        typeName = staticField.Type.Name;
+                        isArray = staticField.Type.IsArray;
+                        return true;
+                    }
+                }
+
+                if (!TryResolveExpressionTypeInfo(memberAccess.Target, out var targetType, out _))
+                    return false;
+                if (!_classDeclarations.TryGetValue(targetType, out var targetClassDecl))
+                    return false;
+
+                var chain = GetInheritanceChain(targetClassDecl);
+                foreach (var cls in chain)
+                {
+                    var field = cls.Members
+                        .OfType<FieldDeclaration>()
+                        .FirstOrDefault(f => f.Name == memberAccess.MemberName);
+                    if (field != null)
+                    {
+                        typeName = field.Type.Name;
+                        isArray = field.Type.IsArray;
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        return false;
     }
 
     // ====================

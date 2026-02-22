@@ -105,6 +105,9 @@
 #define gg_gc_add_root(p)     ((void)0)
 #define gg_gc_remove_root(p)  ((void)0)
 #define gg_gc_set_memory_limit(l) ((void)0)
+#define gg_gc_push_root_frame() (0)
+#define gg_gc_pop_root_frame(frame) ((void)0)
+#define gg_gc_write_barrier(slot, val) (*(void**)(slot) = (void*)(val))
 
 static inline void* gg_gc_alloc_nogc(size_t size) {
     void* ptr = calloc(1, size);
@@ -205,6 +208,24 @@ gg_gc_state* gg_gc_get_state(void);
  * Designed for embedded/constrained environments.
  */
 void gg_gc_set_memory_limit(size_t limit_bytes);
+
+/**
+ * Starts a root frame and returns a snapshot token.
+ * Use with gg_gc_pop_root_frame() to unwind temporary roots.
+ */
+int gg_gc_push_root_frame(void);
+
+/**
+ * Restores the root stack to a previous frame snapshot.
+ */
+void gg_gc_pop_root_frame(int frame);
+
+/**
+ * Write barrier hook used by generated assignments to reference slots.
+ * Current implementation is a passthrough assignment and is reserved
+ * for future incremental/generational GC support.
+ */
+void gg_gc_write_barrier(void** slot, void* new_value);
 
 /* ============================================================
  * MEMORY MANAGEMENT (Legacy API — delegates to GC)

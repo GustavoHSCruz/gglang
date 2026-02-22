@@ -72,6 +72,8 @@ install: publish
 	@sudo cp runtime/gg_runtime.c $(RUNTIME_DIR)/
 	@sudo cp runtime/gg_runtime.h $(RUNTIME_DIR)/
 	@sudo cp libs/*.lib.gg $(LIBS_DIR)/ 2>/dev/null || true
+	@sudo chmod 444 $(LIBS_DIR)/*.lib.gg 2>/dev/null || true
+	@sudo sh -c 'if command -v chattr >/dev/null 2>&1; then chattr +i $(LIBS_DIR)/*.lib.gg 2>/dev/null || true; elif command -v chflags >/dev/null 2>&1; then chflags uchg $(LIBS_DIR)/*.lib.gg 2>/dev/null || true; fi'
 	@echo ""
 	@echo "[ggLang] installation complete!"
 	@echo ""
@@ -85,6 +87,7 @@ install: publish
 uninstall:
 	@echo "=== Uninstalling ggLang ==="
 	@sudo rm -f $(BINDIR)/gg
+	@sudo sh -c 'if [ -d "$(LIBS_DIR)" ]; then if command -v chattr >/dev/null 2>&1; then chattr -i $(LIBS_DIR)/*.lib.gg 2>/dev/null || true; elif command -v chflags >/dev/null 2>&1; then chflags nouchg $(LIBS_DIR)/*.lib.gg 2>/dev/null || true; fi; fi'
 	@sudo rm -rf $(LIBDIR)
 	@echo "[ggLang] uninstalled"
 

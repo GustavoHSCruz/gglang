@@ -7,6 +7,9 @@
 #include "gg_runtime.h"
 #include <ctype.h>
 #include <time.h>
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 
 /* Seed random on first use */
 static int gg_random_seeded = 0;
@@ -26,7 +29,71 @@ static void gg_ensure_random_seeded(void) {
 /** Global GC state — single instance for the entire program. */
 static gg_gc_state gg_gc = {0};
 
+#ifdef _WIN32
+static CRITICAL_SECTION gg_gc_mutex;
+static int gg_gc_mutex_ready = 0;
+
+static void gg_gc_lock_init(void) {
+    if (!gg_gc_mutex_ready) {
+        InitializeCriticalSection(&gg_gc_mutex);
+        gg_gc_mutex_ready = 1;
+    }
+}
+
+static void gg_gc_lock_acquire(void) {
+    if (gg_gc_mutex_ready) {
+        EnterCriticalSection(&gg_gc_mutex);
+    }
+}
+
+static void gg_gc_lock_release(void) {
+    if (gg_gc_mutex_ready) {
+        LeaveCriticalSection(&gg_gc_mutex);
+    }
+}
+
+static void gg_gc_lock_destroy(void) {
+    if (gg_gc_mutex_ready) {
+        DeleteCriticalSection(&gg_gc_mutex);
+        gg_gc_mutex_ready = 0;
+    }
+}
+#else
+static pthread_mutex_t gg_gc_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int gg_gc_mutex_ready = 0;
+
+static void gg_gc_lock_init(void) {
+    gg_gc_mutex_ready = 1;
+}
+
+static void gg_gc_lock_acquire(void) {
+    if (gg_gc_mutex_ready) {
+        pthread_mutex_lock(&gg_gc_mutex);
+    }
+}
+
+static void gg_gc_lock_release(void) {
+    if (gg_gc_mutex_ready) {
+        pthread_mutex_unlock(&gg_gc_mutex);
+    }
+}
+
+static void gg_gc_lock_destroy(void) {
+    gg_gc_mutex_ready = 0;
+}
+#endif
+
+static void gg_gc_ensure_lock(void) {
+    if (!gg_gc_mutex_ready) {
+        gg_gc_lock_init();
+    }
+}
+
+static void gg_gc_collect_locked(void);
+
 void gg_gc_init(void) {
+    gg_gc_ensure_lock();
+    gg_gc_lock_acquire();
     gg_gc.heap = NULL;
     gg_gc.root_count = 0;
     gg_gc.alloc_count = 0;
@@ -36,9 +103,13 @@ void gg_gc_init(void) {
     gg_gc.collections = 0;
     gg_gc.memory_limit = 0;  /* 0 = unlimited by default */
     memset(gg_gc.roots, 0, sizeof(gg_gc.roots));
+    gg_gc_lock_release();
 }
 
 void gg_gc_shutdown(void) {
+    gg_gc_ensure_lock();
+    gg_gc_lock_acquire();
+
     /* Free every object still on the heap. */
     gg_gc_header* obj = gg_gc.heap;
     while (obj) {
@@ -51,18 +122,26 @@ void gg_gc_shutdown(void) {
     gg_gc.root_count = 0;
     gg_gc.alloc_count = 0;
     gg_gc.total_allocated = 0;
+    gg_gc.memory_limit = 0;
+    memset(gg_gc.roots, 0, sizeof(gg_gc.roots));
+
+    gg_gc_lock_release();
+    gg_gc_lock_destroy();
 }
 
 void* gg_gc_alloc(size_t size) {
+    gg_gc_ensure_lock();
+    gg_gc_lock_acquire();
+
     /* Check if we should collect before allocating. */
     if (gg_gc.alloc_count >= gg_gc.threshold) {
-        gg_gc_collect();
+        gg_gc_collect_locked();
     }
 
     /* Check memory limit before allocating. */
     if (gg_gc.memory_limit > 0 && (gg_gc.total_allocated + size) > gg_gc.memory_limit) {
         /* Force a GC collection to try to free memory. */
-        gg_gc_collect();
+        gg_gc_collect_locked();
 
         /* Check again after collection. */
         if ((gg_gc.total_allocated + size) > gg_gc.memory_limit) {
@@ -71,6 +150,7 @@ void* gg_gc_alloc(size_t size) {
                     gg_gc.total_allocated, gg_gc.memory_limit, size);
             fprintf(stderr, "[ggLang GC] The application has been terminated due to memory constraints.\n");
             fprintf(stderr, "[ggLang GC] Increase the memory limit with 'gg init --mem <size>' or optimize memory usage.\n");
+            gg_gc_lock_release();
             exit(137);  /* 128 + 9 (SIGKILL convention) */
         }
     }
@@ -78,10 +158,11 @@ void* gg_gc_alloc(size_t size) {
     gg_gc_header* header = (gg_gc_header*)calloc(1, sizeof(gg_gc_header) + size);
     if (!header) {
         /* Try collecting and retrying once. */
-        gg_gc_collect();
+        gg_gc_collect_locked();
         header = (gg_gc_header*)calloc(1, sizeof(gg_gc_header) + size);
         if (!header) {
             fprintf(stderr, "[ggLang GC] Fatal error: out of memory (%zu bytes)\n", size);
+            gg_gc_lock_release();
             exit(1);
         }
     }
@@ -95,28 +176,77 @@ void* gg_gc_alloc(size_t size) {
     gg_gc.total_allocated += size;
 
     /* Return pointer past the header. */
-    return (void*)(header + 1);
+    void* result = (void*)(header + 1);
+    gg_gc_lock_release();
+    return result;
 }
 
 void gg_gc_add_root(void* root_ptr) {
+    gg_gc_ensure_lock();
+    gg_gc_lock_acquire();
+
+    for (int i = 0; i < gg_gc.root_count; i++) {
+        if (gg_gc.roots[i] == root_ptr) {
+            gg_gc_lock_release();
+            return;
+        }
+    }
+
     if (gg_gc.root_count >= GG_GC_MAX_ROOTS) {
         fprintf(stderr, "[ggLang GC] Warning: root set overflow, ignoring root\n");
+        gg_gc_lock_release();
         return;
     }
+
     gg_gc.roots[gg_gc.root_count++] = root_ptr;
+    gg_gc_lock_release();
 }
 
 void gg_gc_remove_root(void* root_ptr) {
+    gg_gc_ensure_lock();
+    gg_gc_lock_acquire();
+
     for (int i = 0; i < gg_gc.root_count; i++) {
         if (gg_gc.roots[i] == root_ptr) {
             /* Shift remaining roots down. */
             for (int j = i; j < gg_gc.root_count - 1; j++) {
                 gg_gc.roots[j] = gg_gc.roots[j + 1];
             }
+            gg_gc.roots[gg_gc.root_count - 1] = NULL;
             gg_gc.root_count--;
+            gg_gc_lock_release();
             return;
         }
     }
+
+    gg_gc_lock_release();
+}
+
+int gg_gc_push_root_frame(void) {
+    gg_gc_ensure_lock();
+    gg_gc_lock_acquire();
+    int frame = gg_gc.root_count;
+    gg_gc_lock_release();
+    return frame;
+}
+
+void gg_gc_pop_root_frame(int frame) {
+    gg_gc_ensure_lock();
+    gg_gc_lock_acquire();
+
+    if (frame < 0) {
+        frame = 0;
+    }
+    if (frame > gg_gc.root_count) {
+        gg_gc_lock_release();
+        return;
+    }
+
+    for (int i = frame; i < gg_gc.root_count; i++) {
+        gg_gc.roots[i] = NULL;
+    }
+    gg_gc.root_count = frame;
+    gg_gc_lock_release();
 }
 
 /**
@@ -204,7 +334,7 @@ static void gg_gc_sweep(void) {
     }
 }
 
-void gg_gc_collect(void) {
+static void gg_gc_collect_locked(void) {
     gg_gc_mark();
     gg_gc_sweep();
     gg_gc.alloc_count = 0;
@@ -220,8 +350,23 @@ void gg_gc_collect(void) {
     }
 }
 
+void gg_gc_collect(void) {
+    gg_gc_ensure_lock();
+    gg_gc_lock_acquire();
+    gg_gc_collect_locked();
+    gg_gc_lock_release();
+}
+
 void gg_gc_set_memory_limit(size_t limit_bytes) {
+    gg_gc_ensure_lock();
+    gg_gc_lock_acquire();
     gg_gc.memory_limit = limit_bytes;
+    gg_gc_lock_release();
+}
+
+void gg_gc_write_barrier(void** slot, void* new_value) {
+    if (!slot) return;
+    *slot = new_value;
 }
 
 gg_gc_state* gg_gc_get_state(void) {
@@ -238,6 +383,10 @@ void* gg_alloc(size_t size) {
 
 void gg_free(void* ptr) {
     if (!ptr) return;
+
+    gg_gc_ensure_lock();
+    gg_gc_lock_acquire();
+
     /*
      * Remove from the GC heap list so the collector won't touch it,
      * then free the underlying allocation (header + body).
@@ -249,10 +398,14 @@ void gg_free(void* ptr) {
             *p = target->next;
             gg_gc.total_allocated -= target->size;
             free(target);
+            gg_gc_lock_release();
             return;
         }
         p = &(*p)->next;
     }
+
+    gg_gc_lock_release();
+
     /* Fallback: not tracked by GC, free directly. */
     free(ptr);
 }

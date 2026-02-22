@@ -79,6 +79,8 @@ Generates ANSI C code implementing the ggLang program:
 - **Console I/O**: `Console.writeLine(x)` → `printf()` with type-aware format specifiers
 - **Math**: `Math.abs(x)` → `abs(x)` / `fabs(x)` depending on type
 - **Extension Methods**: `expr.method()` → `gg_ext_{type}_{method}(expr)`
+- **GC roots**: emits automatic root frames (`gg_gc_push_root_frame` / `gg_gc_pop_root_frame`) and auto-registers local/parameter reference roots
+- **Write barrier hook**: reference assignments in statement context call `gg_gc_write_barrier(...)`
 
 The output is split into 4 `StringBuilder` sections: `_header`, `_structs`, `_prototypes`, `_implementations`.
 
@@ -89,14 +91,16 @@ The output is split into 4 `StringBuilder` sections: `_header`, `_structs`, `_pr
 
 - Wraps GCC to compile the generated C code
 - Links the C runtime (`gg_runtime.c`) and math library (`-lm`)
-- Supports Windows (Winsock2) and Linux
+- Adds `-pthread` on POSIX targets for runtime GC synchronization
+- Supports Windows, Linux, and macOS
 - Provides `Compile()` and `Run()` methods
 
 ## C Runtime (`runtime/`)
 
 The C runtime provides:
 
-- **Memory management**: `gg_alloc()`, `gg_free()` with mark-and-sweep GC
+- **Memory management**: `gg_alloc()`, `gg_free()` with mark-and-sweep GC, automatic root frames, and configurable memory limit (`gg_gc_set_memory_limit`)
+- **GC concurrency hardening**: global GC state is protected by a runtime mutex
 - **String operations**: concatenation, comparison, conversion
 - **Console I/O**: `gg_console_readline()`, etc.
 - **Standard library implementations**: Hash maps, linked lists, stacks, queues, crypto, file I/O, networking, OS functions

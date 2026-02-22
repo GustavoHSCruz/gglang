@@ -12,6 +12,7 @@ PREFIX="${GG_PREFIX:-/usr/local}"
 BINDIR="$PREFIX/bin"
 LIBDIR="$PREFIX/lib/gglang"
 RUNTIMEDIR="$LIBDIR/runtime"
+LIBSDIR="$LIBDIR/libs"
 BUILD_DIR="build"
 CLI_PROJECT="src/ggLang.CLI/ggLang.CLI.csproj"
 
@@ -129,13 +130,21 @@ do_install() {
     info "installing to $PREFIX ..."
     echo "  binary:  $BINDIR/gg"
     echo "  runtime: $RUNTIMEDIR/"
+    echo "  libs:    $LIBSDIR/"
     echo ""
 
-    sudo mkdir -p "$BINDIR" "$RUNTIMEDIR"
+    sudo mkdir -p "$BINDIR" "$RUNTIMEDIR" "$LIBSDIR"
     sudo cp "$BUILD_DIR/gg" "$BINDIR/gg"
     sudo chmod +x "$BINDIR/gg"
     sudo cp runtime/gg_runtime.c "$RUNTIMEDIR/"
     sudo cp runtime/gg_runtime.h "$RUNTIMEDIR/"
+    sudo cp libs/*.lib.gg "$LIBSDIR/" 2>/dev/null || true
+    sudo chmod 444 "$LIBSDIR"/*.lib.gg 2>/dev/null || true
+    if command -v chattr &>/dev/null; then
+        sudo chattr +i "$LIBSDIR"/*.lib.gg 2>/dev/null || true
+    elif command -v chflags &>/dev/null; then
+        sudo chflags uchg "$LIBSDIR"/*.lib.gg 2>/dev/null || true
+    fi
 
     echo ""
     ok "installation complete!"
@@ -161,6 +170,13 @@ do_uninstall() {
 
     if [[ -d "$LIBDIR" ]]; then
         info "removing $LIBDIR/"
+        if [[ -d "$LIBSDIR" ]]; then
+            if command -v chattr &>/dev/null; then
+                sudo chattr -i "$LIBSDIR"/*.lib.gg 2>/dev/null || true
+            elif command -v chflags &>/dev/null; then
+                sudo chflags nouchg "$LIBSDIR"/*.lib.gg 2>/dev/null || true
+            fi
+        fi
         sudo rm -rf "$LIBDIR"
     fi
 

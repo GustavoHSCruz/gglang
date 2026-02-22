@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ggLang.Compiler\ggLang.Compiler.csproj" />
+    <ProjectReference Include="..\..\src\ggLang.CLI\ggLang.CLI.csproj" />
   </ItemGroup>
 
 </Project>
