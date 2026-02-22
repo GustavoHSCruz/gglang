@@ -1,0 +1,33 @@
+// imports.gg - Module and import system in ggLang
+// Demonstrates module declaration and import statements.
+
+module MyApp;
+
+import Math;
+
+class Geometry {
+    double circleArea(double radius) {
+        return 3.14159 * radius * radius;
+    }
+
+    int absDistance(int a, int b) {
+        return Math.abs(a - b);
+    }
+}
+
+class Program {
+    static void main() {
+        Console.writeLine("=== Module & Import ===");
+
+        var geo = new Geometry();
+
+        Console.writeLine("Circle area (r=5):");
+        Console.writeLine(geo.circleArea(5.0));
+
+        Console.writeLine("Absolute distance (3, 10):");
+        Console.writeLine(geo.absDistance(3, 10));
+
+        Console.writeLine("Absolute distance (10, 3):");
+        Console.writeLine(geo.absDistance(10, 3));
+    }
+}

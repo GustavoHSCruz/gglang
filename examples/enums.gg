@@ -1,0 +1,37 @@
+// enums.gg - Enums in ggLang
+// Demonstrates enum declaration and usage with integer values.
+
+enum Color {
+    Red = 0,
+    Green = 1,
+    Blue = 2
+}
+
+enum Direction {
+    North = 0,
+    South = 1,
+    East = 2,
+    West = 3
+}
+
+class Program {
+    static void main() {
+        Console.writeLine("=== Enums ===");
+
+        int myColor = 1;
+        Console.writeLine("Color value:");
+        Console.writeLine(myColor);
+
+        int dir = 3;
+        Console.writeLine("Direction value:");
+        Console.writeLine(dir);
+
+        if (myColor == 1) {
+            Console.writeLine("Color is Green");
+        }
+
+        if (dir == 3) {
+            Console.writeLine("Direction is West");
+        }
+    }
+}

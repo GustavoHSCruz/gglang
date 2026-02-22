@@ -1,0 +1,320 @@
+// Collections.lib.gg - Collections Library for ggLang
+// Provides high-performance data structures:
+//   HashMap, HashSet, LinkedList, Stack, Queue
+//
+// PERFORMANCE: All structures are backed by optimized C implementations
+// in gg_runtime.c using open addressing, FNV-1a hashing, power-of-2
+// capacities, and cache-friendly memory layouts.
+
+[@Library("Collections", "1.0.0")]
+class Collections {
+
+    // ====================
+    // UTILITY
+    // ====================
+
+    /// Swaps two integer values and prints the result.
+    static void swapPrint(int a, int b) {
+        int temp = a;
+        a = b;
+        b = temp;
+        Console.writeLine("Swapped: " + a.toString() + ", " + b.toString());
+    }
+}
+
+// ============================================================
+// HashMap — Key-value store with O(1) average operations
+// Uses FNV-1a hashing with open addressing and linear probing.
+// Power-of-2 capacity for fast modular arithmetic (bitmask).
+// Load factor 0.75 triggers automatic resize.
+// ============================================================
+
+[@Library("HashMap", "1.0.0")]
+class HashMap {
+
+    /// Creates a new empty HashMap.
+    static void create() {
+        // Backing: gg_hashmap_new(sizeof(value))
+    }
+
+    /// Creates a new HashMap with a specified initial capacity.
+    /// Higher initial capacity avoids early resizing for known datasets.
+    static void createWithCapacity(int capacity) {
+        // Backing: gg_hashmap_new_capacity(sizeof(value), capacity)
+    }
+
+    /// Inserts or updates a key-value pair.
+    /// Time: O(1) average, O(n) worst case (resize).
+    static void put(string key, int value) {
+        // Backing: gg_hashmap_put(map, key, &value)
+    }
+
+    /// Gets the value for a key. Returns 0 if not found.
+    /// Time: O(1) average.
+    static int get(string key) {
+        // Backing: gg_hashmap_get(map, key)
+        return 0;
+    }
+
+    /// Checks if a key exists in the map.
+    /// Time: O(1) average.
+    static bool containsKey(string key) {
+        // Backing: gg_hashmap_containsKey(map, key)
+        return false;
+    }
+
+    /// Removes a key from the map. Returns true if the key was found.
+    /// Uses tombstone deletion to maintain probe sequences.
+    /// Time: O(1) average.
+    static bool remove(string key) {
+        // Backing: gg_hashmap_remove(map, key)
+        return false;
+    }
+
+    /// Returns the number of entries in the map.
+    /// Time: O(1).
+    static int count() {
+        // Backing: gg_hashmap_count(map)
+        return 0;
+    }
+
+    /// Removes all entries.
+    /// Time: O(n).
+    static void clear() {
+        // Backing: gg_hashmap_clear(map)
+    }
+}
+
+// ============================================================
+// HashSet — Unique key collection with O(1) average operations
+// Same hashing strategy as HashMap but stores only keys.
+// ============================================================
+
+[@Library("HashSet", "1.0.0")]
+class HashSet {
+
+    /// Creates a new empty HashSet.
+    static void create() {
+        // Backing: gg_hashset_new()
+    }
+
+    /// Creates a HashSet with specified initial capacity.
+    static void createWithCapacity(int capacity) {
+        // Backing: gg_hashset_new_capacity(capacity)
+    }
+
+    /// Adds a key. Returns true if the key was new.
+    /// Time: O(1) average.
+    static bool add(string key) {
+        // Backing: gg_hashset_add(set, key)
+        return false;
+    }
+
+    /// Checks if a key is in the set.
+    /// Time: O(1) average.
+    static bool contains(string key) {
+        // Backing: gg_hashset_contains(set, key)
+        return false;
+    }
+
+    /// Removes a key. Returns true if found.
+    /// Time: O(1) average.
+    static bool remove(string key) {
+        // Backing: gg_hashset_remove(set, key)
+        return false;
+    }
+
+    /// Returns the number of elements.
+    /// Time: O(1).
+    static int count() {
+        // Backing: gg_hashset_count(set)
+        return 0;
+    }
+
+    /// Removes all elements.
+    static void clear() {
+        // Backing: gg_hashset_clear(set)
+    }
+}
+
+// ============================================================
+// LinkedList — Doubly-linked list
+// O(1) insert/remove at head/tail, O(n) random access.
+// Ideal for queues, deques, and frequent insert/remove operations.
+// ============================================================
+
+[@Library("LinkedList", "1.0.0")]
+class LinkedList {
+
+    /// Creates a new empty LinkedList.
+    static void create() {
+        // Backing: gg_list_new(sizeof(int))
+    }
+
+    /// Adds an element at the beginning.
+    /// Time: O(1).
+    static void addFirst(int value) {
+        // Backing: gg_list_addFirst(list, &value)
+    }
+
+    /// Adds an element at the end.
+    /// Time: O(1).
+    static void addLast(int value) {
+        // Backing: gg_list_addLast(list, &value)
+    }
+
+    /// Gets the first element.
+    /// Time: O(1).
+    static int getFirst() {
+        // Backing: gg_list_getFirst(list)
+        return 0;
+    }
+
+    /// Gets the last element.
+    /// Time: O(1).
+    static int getLast() {
+        // Backing: gg_list_getLast(list)
+        return 0;
+    }
+
+    /// Gets the element at the given index.
+    /// Time: O(n).
+    static int get(int index) {
+        // Backing: gg_list_get(list, index)
+        return 0;
+    }
+
+    /// Removes the first element. Returns true if successful.
+    /// Time: O(1).
+    static bool removeFirst() {
+        // Backing: gg_list_removeFirst(list)
+        return false;
+    }
+
+    /// Removes the last element. Returns true if successful.
+    /// Time: O(1).
+    static bool removeLast() {
+        // Backing: gg_list_removeLast(list)
+        return false;
+    }
+
+    /// Returns the number of elements.
+    /// Time: O(1).
+    static int count() {
+        // Backing: gg_list_count(list)
+        return 0;
+    }
+
+    /// Removes all elements.
+    static void clear() {
+        // Backing: gg_list_clear(list)
+    }
+}
+
+// ============================================================
+// Stack — Last-In-First-Out (LIFO) container
+// Backed by a dynamic array for cache-friendly performance.
+// O(1) push/pop/peek, amortized O(1) with doubling strategy.
+// ============================================================
+
+[@Library("Stack", "1.0.0")]
+class Stack {
+
+    /// Creates a new empty Stack.
+    static void create() {
+        // Backing: gg_stack_new(sizeof(int))
+    }
+
+    /// Pushes a value onto the top.
+    /// Time: O(1) amortized.
+    static void push(int value) {
+        // Backing: gg_stack_push(stack, &value)
+    }
+
+    /// Returns the top value without removing it.
+    /// Time: O(1).
+    static int peek() {
+        // Backing: gg_stack_peek(stack)
+        return 0;
+    }
+
+    /// Removes and returns the top value.
+    /// Time: O(1).
+    static int pop() {
+        // Backing: gg_stack_pop(stack, &out)
+        return 0;
+    }
+
+    /// Returns the number of elements.
+    /// Time: O(1).
+    static int count() {
+        // Backing: gg_stack_count(stack)
+        return 0;
+    }
+
+    /// Checks if the stack is empty.
+    /// Time: O(1).
+    static bool isEmpty() {
+        // Backing: gg_stack_isEmpty(stack)
+        return true;
+    }
+
+    /// Removes all elements.
+    static void clear() {
+        // Backing: gg_stack_clear(stack)
+    }
+}
+
+// ============================================================
+// Queue — First-In-First-Out (FIFO) container
+// Backed by a circular buffer for cache-friendly performance.
+// O(1) enqueue/dequeue/peek, automatic resize.
+// ============================================================
+
+[@Library("Queue", "1.0.0")]
+class Queue {
+
+    /// Creates a new empty Queue.
+    static void create() {
+        // Backing: gg_queue_new(sizeof(int))
+    }
+
+    /// Adds a value to the back.
+    /// Time: O(1) amortized.
+    static void enqueue(int value) {
+        // Backing: gg_queue_enqueue(queue, &value)
+    }
+
+    /// Removes and returns the front value.
+    /// Time: O(1).
+    static int dequeue() {
+        // Backing: gg_queue_dequeue(queue, &out)
+        return 0;
+    }
+
+    /// Returns the front value without removing it.
+    /// Time: O(1).
+    static int peek() {
+        // Backing: gg_queue_peek(queue)
+        return 0;
+    }
+
+    /// Returns the number of elements.
+    /// Time: O(1).
+    static int count() {
+        // Backing: gg_queue_count(queue)
+        return 0;
+    }
+
+    /// Checks if the queue is empty.
+    /// Time: O(1).
+    static bool isEmpty() {
+        // Backing: gg_queue_isEmpty(queue)
+        return true;
+    }
+
+    /// Removes all elements.
+    static void clear() {
+        // Backing: gg_queue_clear(queue)
+    }
+}

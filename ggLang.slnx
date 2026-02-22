@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ggLang.CLI/ggLang.CLI.csproj" />
+    <Project Path="src/ggLang.Compiler/ggLang.Compiler.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ggLang.Tests/ggLang.Tests.csproj" />
+  </Folder>
+</Solution>

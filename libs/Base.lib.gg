@@ -1,0 +1,225 @@
+// Base.lib.gg - Base Utility Library for ggLang
+// Provides general-purpose utility functions and helpers.
+// These are convenience methods not necessarily used in every program.
+
+[@Library("Base", "1.0.0")]
+class Base {
+
+    // ====================
+    // TYPE CHECKING
+    // ====================
+
+    /// Returns true if the string represents a valid integer.
+    static bool isInt(string value) {
+        if (value.isEmpty()) { return false; }
+        int i = 0;
+        if (value.charAt(0) == "-" || value.charAt(0) == "+") { i = 1; }
+        while (i < value.length()) {
+            string c = value.charAt(i);
+            if (c < "0" || c > "9") { return false; }
+            i = i + 1;
+        }
+        return true;
+    }
+
+    /// Returns true if the string represents a valid decimal number.
+    static bool isDecimal(string value) {
+        if (value.isEmpty()) { return false; }
+        bool hasDot = false;
+        int i = 0;
+        if (value.charAt(0) == "-" || value.charAt(0) == "+") { i = 1; }
+        while (i < value.length()) {
+            string c = value.charAt(i);
+            if (c == ".") {
+                if (hasDot) { return false; }
+                hasDot = true;
+            } else {
+                if (c < "0" || c > "9") { return false; }
+            }
+            i = i + 1;
+        }
+        return true;
+    }
+
+    /// Returns true if the string is "true" or "false" (case-insensitive).
+    static bool isBool(string value) {
+        string lower = value.toLower();
+        return lower == "true" || lower == "false";
+    }
+
+    // ====================
+    // STRING UTILITIES
+    // ====================
+
+    /// Repeats a string n times.
+    static string repeat(string value, int count) {
+        string result = "";
+        int i = 0;
+        while (i < count) {
+            result = result + value;
+            i = i + 1;
+        }
+        return result;
+    }
+
+    /// Joins multiple strings with a separator.
+    /// Usage: Base.join(", ", "a", "b", "c") → "a, b, c"
+    static string join2(string sep, string a, string b) {
+        return a + sep + b;
+    }
+
+    static string join3(string sep, string a, string b, string c) {
+        return a + sep + b + sep + c;
+    }
+
+    static string join4(string sep, string a, string b, string c, string d) {
+        return a + sep + b + sep + c + sep + d;
+    }
+
+    /// Returns a string of spaces with given length.
+    static string spaces(int count) {
+        return Base.repeat(" ", count);
+    }
+
+    /// Checks if a string is null or empty.
+    static bool isNullOrEmpty(string value) {
+        return value == "" || value.isEmpty();
+    }
+
+    /// Checks if a string is null, empty, or whitespace only.
+    static bool isNullOrWhitespace(string value) {
+        return value.trim().isEmpty();
+    }
+
+    // ====================
+    // MATH UTILITIES
+    // ====================
+
+    /// Returns the sign of the number: -1, 0, or 1.
+    static int sign(int value) {
+        if (value > 0) { return 1; }
+        if (value < 0) { return -1; }
+        return 0;
+    }
+
+    /// Returns the sign of a decimal: -1.0, 0.0, or 1.0.
+    static double signDecimal(double value) {
+        if (value > 0.0) { return 1.0; }
+        if (value < 0.0) { return -1.0; }
+        return 0.0;
+    }
+
+    /// Checks if a number is even.
+    static bool isEven(int value) {
+        return value % 2 == 0;
+    }
+
+    /// Checks if a number is odd.
+    static bool isOdd(int value) {
+        return value % 2 != 0;
+    }
+
+    /// Checks if a number is positive.
+    static bool isPositive(int value) {
+        return value > 0;
+    }
+
+    /// Checks if a number is negative.
+    static bool isNegative(int value) {
+        return value < 0;
+    }
+
+    /// Checks if a number is zero.
+    static bool isZero(int value) {
+        return value == 0;
+    }
+
+    /// Returns the absolute difference between two integers.
+    static int diff(int a, int b) {
+        int result = a - b;
+        if (result < 0) { return result * -1; }
+        return result;
+    }
+
+    /// Linearly interpolates between two values.
+    static double lerp(double a, double b, double t) {
+        return a + (b - a) * t;
+    }
+
+    /// Maps a value from one range to another.
+    static double map(double value, double fromMin, double fromMax, double toMin, double toMax) {
+        return (value - fromMin) / (fromMax - fromMin) * (toMax - toMin) + toMin;
+    }
+
+    // ====================
+    // COMPARISON / SWAP
+    // ====================
+
+    /// Returns the larger of two integers.
+    static int maxInt(int a, int b) {
+        if (a > b) { return a; }
+        return b;
+    }
+
+    /// Returns the smaller of two integers.
+    static int minInt(int a, int b) {
+        if (a < b) { return a; }
+        return b;
+    }
+
+    /// Returns the larger of two decimals.
+    static double maxDecimal(double a, double b) {
+        if (a > b) { return a; }
+        return b;
+    }
+
+    /// Returns the smaller of two decimals.
+    static double minDecimal(double a, double b) {
+        if (a < b) { return a; }
+        return b;
+    }
+
+    // ====================
+    // ASSERTIONS / DEBUG
+    // ====================
+
+    /// Prints a formatted debug message to the console.
+    static void debug(string message) {
+        Console.writeLine("[DEBUG] " + message);
+    }
+
+    /// Prints a warning message to the console.
+    static void warn(string message) {
+        Console.writeLine("[WARN] " + message);
+    }
+
+    /// Prints an error message to the console.
+    static void error(string message) {
+        Console.writeLine("[ERROR] " + message);
+    }
+
+    /// Prints a formatted info message to the console.
+    static void info(string message) {
+        Console.writeLine("[INFO] " + message);
+    }
+
+    // ====================
+    // TIMING
+    // ====================
+
+    /// Returns the current timestamp as a string.
+    static string timestamp() {
+        return Clock.dateTime();
+    }
+
+    /// Returns a human-readable elapsed time string.
+    static string elapsed(int startMs, int endMs) {
+        int diff = endMs - startMs;
+        if (diff < 1000) {
+            return diff.toString() + "ms";
+        }
+        int seconds = diff / 1000;
+        int remaining = diff % 1000;
+        return seconds.toString() + "." + remaining.toString() + "s";
+    }
+}

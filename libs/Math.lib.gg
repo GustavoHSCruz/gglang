@@ -1,0 +1,41 @@
+// Math.lib.gg - Standard Math Library for ggLang
+// Provides common mathematical utility functions.
+
+[@Library("Math", "1.0.0")]
+class Math {
+
+    /// Returns the absolute value of an integer.
+    static int abs(int value) {
+        if (value < 0) {
+            return -value;
+        }
+        return value;
+    }
+
+    /// Returns the larger of two integers.
+    static int max(int a, int b) {
+        if (a > b) {
+            return a;
+        }
+        return b;
+    }
+
+    /// Returns the smaller of two integers.
+    static int min(int a, int b) {
+        if (a < b) {
+            return a;
+        }
+        return b;
+    }
+
+    /// Clamps a value between a minimum and maximum.
+    static int clamp(int value, int minVal, int maxVal) {
+        if (value < minVal) {
+            return minVal;
+        }
+        if (value > maxVal) {
+            return maxVal;
+        }
+        return value;
+    }
+}

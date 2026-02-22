@@ -1,0 +1,56 @@
+// interfaces.gg - Interfaces in ggLang
+// Demonstrates interface declaration, implementation, and polymorphism.
+
+interface IShape {
+    double area();
+    string describe();
+}
+
+class Circle : IShape {
+    double radius;
+
+    Circle(double radius) {
+        this.radius = radius;
+    }
+
+    double area() {
+        return 3.14159 * this.radius * this.radius;
+    }
+
+    string describe() {
+        return "Circle";
+    }
+}
+
+class Rectangle : IShape {
+    double width;
+    double height;
+
+    Rectangle(double width, double height) {
+        this.width = width;
+        this.height = height;
+    }
+
+    double area() {
+        return this.width * this.height;
+    }
+
+    string describe() {
+        return "Rectangle";
+    }
+}
+
+class Program {
+    static void main() {
+        var circle = new Circle(5.0);
+        var rect = new Rectangle(4.0, 6.0);
+
+        Console.writeLine("=== Interfaces ===");
+
+        Console.writeLine(circle.describe());
+        Console.writeLine(circle.area());
+
+        Console.writeLine(rect.describe());
+        Console.writeLine(rect.area());
+    }
+}

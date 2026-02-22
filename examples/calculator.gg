@@ -1,0 +1,67 @@
+// calculator.gg - Calculator example in ggLang
+// Demonstrates methods, control flow, and arithmetic.
+
+class Calculator {
+    int result;
+
+    Calculator() {
+        this.result = 0;
+    }
+
+    int add(int a, int b) {
+        return a + b;
+    }
+
+    int subtract(int a, int b) {
+        return a - b;
+    }
+
+    int multiply(int a, int b) {
+        return a * b;
+    }
+
+    int factorial(int n) {
+        if (n <= 1) {
+            return 1;
+        }
+        return n * this.factorial(n - 1);
+    }
+
+    bool isEven(int n) {
+        return n % 2 == 0;
+    }
+
+    void printTable(int n) {
+        for (int i = 1; i <= 10; i++) {
+            int r = n * i;
+            Console.writeLine(r);
+        }
+    }
+}
+
+class Program {
+    static void main() {
+        var calc = new Calculator();
+
+        Console.writeLine("=== Basic Operations ===");
+        int sum = calc.add(10, 20);
+        Console.writeLine(sum);
+
+        int diff = calc.subtract(50, 15);
+        Console.writeLine(diff);
+
+        int prod = calc.multiply(6, 7);
+        Console.writeLine(prod);
+
+        Console.writeLine("=== Factorial ===");
+        int fact5 = calc.factorial(5);
+        Console.writeLine(fact5);
+
+        Console.writeLine("=== Multiplication Table of 7 ===");
+        calc.printTable(7);
+
+        Console.writeLine("=== Even Check ===");
+        Console.writeLine(calc.isEven(4));
+        Console.writeLine(calc.isEven(7));
+    }
+}

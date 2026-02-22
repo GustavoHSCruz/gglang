@@ -1,0 +1,55 @@
+# ============================================================
+# ggLang — .gitignore
+# ============================================================
+
+# ── .NET build artifacts ────────────────────────────────────
+bin/
+obj/
+publish/
+*.user
+*.suo
+*.nupkg
+*.snupkg
+project.lock.json
+*.nuget.props
+*.nuget.targets
+
+# ── ggLang build output ────────────────────────────────────
+build/
+
+# ── Generated C files (keep the runtime) ───────────────────
+*.c
+!runtime/gg_runtime.c
+
+# ── Compiled example binaries ──────────────────────────────
+examples/hello
+examples/classes
+examples/calculator
+examples/interfaces
+examples/enums
+examples/libraries
+examples/extensions
+examples/imports
+
+# ── IDE / Editor ──────────────────────────────────────────
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS files ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# ── Environment / secrets ────────────────────────────────
+.env
+.env.*
+
+# ── Temp ──────────────────────────────────────────────────
+/tmp/
+*.tmp
+*.log

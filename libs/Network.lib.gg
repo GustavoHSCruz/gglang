@@ -1,0 +1,202 @@
+// Network.lib.gg - Standard Network Library for ggLang
+// Provides TCP/UDP socket operations, DNS resolution, and network utilities.
+//
+// NOTE: Network I/O requires runtime support (POSIX sockets / Winsock).
+// This library defines the API surface for network operations.
+
+[@Library("Network", "1.0.0")]
+class Network {
+
+    /// Resolves a hostname to an IP address string.
+    /// Returns an empty string if resolution fails.
+    static string resolve(string hostname) {
+        // Runtime: uses getaddrinfo()
+        return "";
+    }
+
+    /// Checks if a host is reachable on a given port.
+    /// Attempts a TCP connection with a timeout (in milliseconds).
+    /// Returns true if the connection succeeded.
+    static bool ping(string host, int port, int timeoutMs) {
+        // Runtime: uses connect() with timeout
+        return false;
+    }
+
+    /// Returns the local machine's hostname.
+    static string getHostName() {
+        // Runtime: uses gethostname()
+        return "";
+    }
+}
+
+/// Provides TCP client socket operations.
+class TcpClient {
+    string host;
+    int port;
+    bool connected;
+
+    TcpClient(string host, int port) {
+        this.host = host;
+        this.port = port;
+        this.connected = false;
+    }
+
+    /// Connects to the remote host.
+    /// Returns true if the connection succeeded.
+    bool connect() {
+        // Runtime: creates socket, resolves host, connects
+        this.connected = true;
+        return true;
+    }
+
+    /// Sends a string over the TCP connection.
+    /// Returns the number of bytes sent, or -1 on error.
+    int send(string data) {
+        // Runtime: uses send()
+        return -1;
+    }
+
+    /// Receives data from the TCP connection.
+    /// Returns the received string, or empty on error/timeout.
+    string receive(int maxBytes) {
+        // Runtime: uses recv()
+        return "";
+    }
+
+    /// Closes the TCP connection.
+    void close() {
+        // Runtime: uses close() / closesocket()
+        this.connected = false;
+    }
+
+    /// Returns whether the socket is currently connected.
+    bool isConnected() {
+        return this.connected;
+    }
+}
+
+/// Provides a simple TCP server that listens for connections.
+class TcpServer {
+    int port;
+    bool listening;
+
+    TcpServer(int port) {
+        this.port = port;
+        this.listening = false;
+    }
+
+    /// Starts listening on the configured port.
+    /// Returns true if the server started successfully.
+    bool start() {
+        // Runtime: creates socket, binds, listens
+        this.listening = true;
+        return true;
+    }
+
+    /// Accepts a single incoming connection.
+    /// Blocks until a client connects.
+    /// Returns a string with the client address, or empty on error.
+    string accept() {
+        // Runtime: uses accept()
+        return "";
+    }
+
+    /// Sends data to the last accepted client.
+    int sendTo(string data) {
+        // Runtime: sends to accepted client socket
+        return -1;
+    }
+
+    /// Receives data from the last accepted client.
+    string receiveFrom(int maxBytes) {
+        // Runtime: receives from accepted client socket
+        return "";
+    }
+
+    /// Stops the server and closes the listening socket.
+    void stop() {
+        // Runtime: uses close() / closesocket()
+        this.listening = false;
+    }
+
+    /// Returns whether the server is currently listening.
+    bool isListening() {
+        return this.listening;
+    }
+}
+
+/// Provides UDP datagram socket operations.
+class UdpSocket {
+    int port;
+    bool bound;
+
+    UdpSocket(int port) {
+        this.port = port;
+        this.bound = false;
+    }
+
+    /// Binds the UDP socket to the configured port for receiving.
+    /// Returns true if the bind was successful.
+    bool bind() {
+        // Runtime: creates UDP socket, binds to port
+        this.bound = true;
+        return true;
+    }
+
+    /// Sends a UDP datagram to the given host and port.
+    /// Returns true if the datagram was sent.
+    bool sendTo(string host, int port, string data) {
+        // Runtime: uses sendto()
+        return false;
+    }
+
+    /// Receives a UDP datagram.
+    /// Returns the received data as a string.
+    string receive(int maxBytes) {
+        // Runtime: uses recvfrom()
+        return "";
+    }
+
+    /// Closes the UDP socket.
+    void close() {
+        // Runtime: closes socket
+        this.bound = false;
+    }
+}
+
+/// Provides URL parsing utilities.
+class Url {
+
+    /// Extracts the protocol/scheme from a URL (e.g., "https").
+    static string getProtocol(string url) {
+        // Parse up to "://"
+        return "";
+    }
+
+    /// Extracts the host from a URL.
+    static string getHost(string url) {
+        return "";
+    }
+
+    /// Extracts the port from a URL. Returns 0 if not specified.
+    static int getPort(string url) {
+        return 0;
+    }
+
+    /// Extracts the path from a URL.
+    static string getPath(string url) {
+        return "";
+    }
+
+    /// URL-encodes a string (percent-encoding).
+    static string encode(string input) {
+        // Runtime: percent-encode unsafe chars
+        return "";
+    }
+
+    /// Decodes a URL-encoded string.
+    static string decode(string encoded) {
+        // Runtime: decode percent-encoded chars
+        return "";
+    }
+}

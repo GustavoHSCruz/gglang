@@ -1,0 +1,150 @@
+// OS.lib.gg - Standard Operating System Library for ggLang
+// Provides environment variables, process execution, platform info, and system utilities.
+//
+// NOTE: OS operations require runtime support.
+// This library defines the API surface for OS interactions.
+
+[@Library("OS", "1.0.0")]
+class OS {
+
+    /// Returns the name of the current operating system.
+    /// Possible values: "linux", "windows", "macos", "unknown"
+    static string platform() {
+        // Runtime: compile-time or runtime detection
+        return "";
+    }
+
+    /// Returns the CPU architecture.
+    /// Possible values: "x86_64", "aarch64", "i386", "arm", "unknown"
+    static string arch() {
+        // Runtime: compile-time detection via macros
+        return "";
+    }
+
+    /// Returns the value of an environment variable.
+    /// Returns an empty string if the variable is not set.
+    static string getEnv(string name) {
+        // Runtime: uses getenv()
+        return "";
+    }
+
+    /// Sets an environment variable.
+    /// Returns true if the operation was successful.
+    static bool setEnv(string name, string value) {
+        // Runtime: uses setenv() / _putenv_s()
+        return false;
+    }
+
+    /// Removes an environment variable.
+    /// Returns true if the variable was removed.
+    static bool removeEnv(string name) {
+        // Runtime: uses unsetenv() / _putenv_s("name", "")
+        return false;
+    }
+
+    /// Exits the program with the given exit code.
+    static void exit(int code) {
+        // Runtime: uses exit()
+    }
+
+    /// Returns the current Unix timestamp in seconds.
+    static int time() {
+        // Runtime: uses time(NULL)
+        return 0;
+    }
+
+    /// Sleeps for the given number of milliseconds.
+    static void sleep(int milliseconds) {
+        // Runtime: uses usleep() / Sleep()
+    }
+
+    /// Returns the number of logical CPU cores.
+    static int cpuCount() {
+        // Runtime: uses sysconf or GetSystemInfo
+        return 1;
+    }
+
+    /// Returns the current user's name.
+    static string userName() {
+        // Runtime: uses getlogin() / GetUserName()
+        return "";
+    }
+
+    /// Returns the user's home directory path.
+    static string homeDir() {
+        // Runtime: uses getenv("HOME") / getenv("USERPROFILE")
+        return "";
+    }
+
+    /// Returns the system's temporary directory path.
+    static string tempDir() {
+        // Runtime: uses /tmp or GetTempPath()
+        return "";
+    }
+
+    /// Returns the path separator for the current platform.
+    /// "/" on Linux/macOS, "\" on Windows.
+    static string pathSeparator() {
+        // Runtime: compile-time detection
+        return "/";
+    }
+
+    /// Returns the line ending for the current platform.
+    /// "\n" on Linux/macOS, "\r\n" on Windows.
+    static string lineEnding() {
+        // Runtime: compile-time detection
+        return "";
+    }
+}
+
+/// Provides process execution capabilities.
+class Process {
+
+    /// Executes a shell command and returns its stdout output.
+    /// Returns an empty string if the command fails.
+    static string exec(string command) {
+        // Runtime: uses popen() / _popen()
+        return "";
+    }
+
+    /// Executes a shell command and returns the exit code.
+    static int run(string command) {
+        // Runtime: uses system()
+        return -1;
+    }
+
+    /// Returns the current process ID.
+    static int pid() {
+        // Runtime: uses getpid() / GetCurrentProcessId()
+        return 0;
+    }
+}
+
+/// Provides system clock and timing utilities.
+class Clock {
+
+    /// Returns a high-resolution timestamp in milliseconds.
+    /// Useful for benchmarking and measuring elapsed time.
+    static int now() {
+        // Runtime: uses clock_gettime() / QueryPerformanceCounter()
+        return 0;
+    }
+
+    /// Returns the current date as a string in "YYYY-MM-DD" format.
+    static string date() {
+        // Runtime: uses localtime()
+        return "";
+    }
+
+    /// Returns the current time as a string in "HH:MM:SS" format.
+    static string time() {
+        // Runtime: uses localtime()
+        return "";
+    }
+
+    /// Returns the current date and time as "YYYY-MM-DD HH:MM:SS".
+    static string dateTime() {
+        // Runtime: uses localtime() + strftime()
+        return "";
+    }
+}

@@ -1,0 +1,24 @@
+// libraries.gg - Standard libraries in ggLang
+// Demonstrates using built-in Math functions.
+
+class Program {
+    static void main() {
+        Console.writeLine("=== Math Library ===");
+
+        int absVal = Math.abs(-42);
+        Console.writeLine(absVal);
+
+        int maxVal = Math.max(10, 25);
+        Console.writeLine(maxVal);
+
+        int minVal = Math.min(10, 25);
+        Console.writeLine(minVal);
+
+        int clamped = Math.clamp(150, 0, 100);
+        Console.writeLine(clamped);
+
+        Console.writeLine("=== Math in Expressions ===");
+        int result = Math.abs(-5) + Math.max(3, 7);
+        Console.writeLine(result);
+    }
+}

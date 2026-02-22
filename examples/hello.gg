@@ -1,0 +1,9 @@
+// hello.gg - Hello World in ggLang
+// Demonstrates basic class with static main method.
+
+class Program {
+    static void main() {
+        Console.writeLine("Hello, World!");
+        Console.writeLine("Welcome to ggLang!");
+    }
+}

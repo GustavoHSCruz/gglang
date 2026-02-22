@@ -1,0 +1,30 @@
+// extensions.gg - Extension methods in ggLang
+// Demonstrates extension methods on primitive types.
+
+class Program {
+    static void main() {
+        Console.writeLine("=== String Extensions ===");
+
+        string greeting = "  Hello, ggLang!  ";
+        Console.writeLine(greeting.trim());
+        Console.writeLine(greeting.trim().toUpper());
+
+        string name = "world";
+        Console.writeLine(name.length());
+        Console.writeLine(name.toUpper());
+        Console.writeLine(name.contains("orl"));
+
+        Console.writeLine("=== Numeric Extensions ===");
+
+        int number = -42;
+        Console.writeLine(number.abs());
+        Console.writeLine(number.toString());
+
+        int positive = 15;
+        Console.writeLine(positive.clamp(0, 10));
+
+        Console.writeLine("=== Chained Calls ===");
+        string result = "  hello  ".trim().toUpper();
+        Console.writeLine(result);
+    }
+}

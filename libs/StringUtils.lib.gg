@@ -1,0 +1,22 @@
+// StringUtils.lib.gg - Standard String Utilities for ggLang
+// Provides common string helper functions.
+
+[@Library("StringUtils", "1.0.0")]
+class StringUtils {
+
+    /// Repeats a string a given number of times.
+    static string repeat(string text, int count) {
+        string result = "";
+        int i = 0;
+        while (i < count) {
+            result = result + text;
+            i = i + 1;
+        }
+        return result;
+    }
+
+    /// Checks if a string is empty (length == 0).
+    static bool isEmpty(string text) {
+        return text == "";
+    }
+}

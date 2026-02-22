@@ -1,0 +1,75 @@
+// classes.gg - OOP features in ggLang
+// Demonstrates inheritance, virtual methods, constructors, and polymorphism.
+
+class Animal {
+    string name;
+    int age;
+
+    Animal(string name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    string getName() {
+        return this.name;
+    }
+
+    int getAge() {
+        return this.age;
+    }
+
+    virtual string speak() {
+        return "...";
+    }
+
+    void describe() {
+        Console.writeLine(this.name);
+        Console.writeLine(this.speak());
+    }
+}
+
+class Dog : Animal {
+    string breed;
+
+    Dog(string name, int age, string breed) : base(name, age) {
+        this.breed = breed;
+    }
+
+    override string speak() {
+        return "Woof!";
+    }
+
+    string getBreed() {
+        return this.breed;
+    }
+}
+
+class Cat : Animal {
+    bool isIndoor;
+
+    Cat(string name, int age, bool isIndoor) : base(name, age) {
+        this.isIndoor = isIndoor;
+    }
+
+    override string speak() {
+        return "Meow!";
+    }
+}
+
+class Program {
+    static void main() {
+        var dog = new Dog("Rex", 5, "Labrador");
+        var cat = new Cat("Whiskers", 3, true);
+
+        Console.writeLine("=== Dog ===");
+        dog.describe();
+        Console.writeLine(dog.getBreed());
+
+        Console.writeLine("=== Cat ===");
+        cat.describe();
+
+        Console.writeLine("=== Polymorphism ===");
+        Console.writeLine(dog.speak());
+        Console.writeLine(cat.speak());
+    }
+}

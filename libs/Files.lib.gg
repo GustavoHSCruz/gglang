@@ -1,0 +1,155 @@
+// Files.lib.gg - Standard File I/O Library for ggLang
+// Provides file system operations: read, write, delete, copy, move, etc.
+//
+// NOTE: File I/O operations require runtime support (C standard library).
+// This library defines the API surface for file operations.
+
+[@Library("Files", "1.0.0")]
+class Files {
+
+    /// Reads the entire contents of a file as a string.
+    /// Returns an empty string if the file does not exist or cannot be read.
+    static string readAll(string path) {
+        // Runtime: uses fopen/fread to read the full file content
+        return "";
+    }
+
+    /// Writes a string to a file, creating or overwriting it.
+    /// Returns true if the write was successful.
+    static bool writeAll(string path, string content) {
+        // Runtime: uses fopen("w")/fwrite
+        return false;
+    }
+
+    /// Appends a string to the end of a file.
+    /// Creates the file if it does not exist.
+    /// Returns true if the operation was successful.
+    static bool append(string path, string content) {
+        // Runtime: uses fopen("a")/fwrite
+        return false;
+    }
+
+    /// Checks whether a file exists at the given path.
+    static bool exists(string path) {
+        // Runtime: uses access() or stat()
+        return false;
+    }
+
+    /// Deletes a file at the given path.
+    /// Returns true if the file was deleted, false if it did not exist.
+    static bool delete(string path) {
+        // Runtime: uses remove()
+        return false;
+    }
+
+    /// Copies a file from source to destination.
+    /// Overwrites the destination if it already exists.
+    /// Returns true if the copy was successful.
+    static bool copy(string source, string destination) {
+        // Runtime: reads source and writes to destination
+        return false;
+    }
+
+    /// Moves (renames) a file from source to destination.
+    /// Returns true if the move was successful.
+    static bool move(string source, string destination) {
+        // Runtime: uses rename()
+        return false;
+    }
+
+    /// Returns the size of a file in bytes.
+    /// Returns -1 if the file does not exist.
+    static int size(string path) {
+        // Runtime: uses stat() to get file size
+        return -1;
+    }
+
+    /// Reads a file line by line and returns all lines as a single
+    /// newline-separated string. (Until arrays are fully supported)
+    static string readLines(string path) {
+        return Files.readAll(path);
+    }
+
+    /// Writes multiple lines to a file (newline-separated string).
+    static bool writeLines(string path, string lines) {
+        return Files.writeAll(path, lines);
+    }
+
+    /// Creates an empty file at the given path.
+    /// Returns true if the file was created.
+    static bool create(string path) {
+        return Files.writeAll(path, "");
+    }
+}
+
+/// Provides directory (folder) operations.
+class Directory {
+
+    /// Checks whether a directory exists at the given path.
+    static bool exists(string path) {
+        // Runtime: uses stat() and S_ISDIR
+        return false;
+    }
+
+    /// Creates a directory at the given path.
+    /// Returns true if the directory was created.
+    static bool create(string path) {
+        // Runtime: uses mkdir()
+        return false;
+    }
+
+    /// Removes an empty directory at the given path.
+    /// Returns true if the directory was removed.
+    static bool remove(string path) {
+        // Runtime: uses rmdir()
+        return false;
+    }
+
+    /// Returns the current working directory.
+    static string getCurrent() {
+        // Runtime: uses getcwd()
+        return "";
+    }
+
+    /// Changes the current working directory.
+    /// Returns true if the change was successful.
+    static bool setCurrent(string path) {
+        // Runtime: uses chdir()
+        return false;
+    }
+}
+
+/// Provides path string manipulation utilities.
+class Path {
+
+    /// Combines two path segments with the platform path separator.
+    static string combine(string path1, string path2) {
+        if (path1 == "") {
+            return path2;
+        }
+        if (path2 == "") {
+            return path1;
+        }
+        return path1 + "/" + path2;
+    }
+
+    /// Returns the file name from a path (after the last separator).
+    static string getFileName(string path) {
+        // Scans backwards for '/' or '\'
+        int len = 0;
+        // Placeholder: runtime will implement proper parsing
+        return path;
+    }
+
+    /// Returns the file extension (including the dot).
+    static string getExtension(string path) {
+        // Placeholder: runtime will implement
+        return "";
+    }
+
+    /// Returns the directory part of a path.
+    static string getDirectory(string path) {
+        // Placeholder: runtime will implement
+        return "";
+    }
+}

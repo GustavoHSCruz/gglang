@@ -1,0 +1,114 @@
+// Http.lib.gg - Standard HTTP Library for ggLang
+// Provides a simple interface for making HTTP requests.
+//
+// NOTE: Full network I/O requires runtime support (sockets).
+// This library defines the API surface for HTTP operations.
+
+[@Library("Http", "1.0.0")]
+class Http {
+
+    /// Performs an HTTP GET request to the given URL.
+    /// Returns the response body as a string.
+    static string get(string url) {
+        var request = new HttpRequest();
+        request.setMethod("GET");
+        request.setUrl(url);
+        return request.send();
+    }
+
+    /// Performs an HTTP POST request with a body.
+    /// Returns the response body as a string.
+    static string post(string url, string body) {
+        var request = new HttpRequest();
+        request.setMethod("POST");
+        request.setUrl(url);
+        request.setBody(body);
+        return request.send();
+    }
+
+    /// Performs an HTTP PUT request with a body.
+    /// Returns the response body as a string.
+    static string put(string url, string body) {
+        var request = new HttpRequest();
+        request.setMethod("PUT");
+        request.setUrl(url);
+        request.setBody(body);
+        return request.send();
+    }
+
+    /// Performs an HTTP DELETE request.
+    /// Returns the response body as a string.
+    static string delete(string url) {
+        var request = new HttpRequest();
+        request.setMethod("DELETE");
+        request.setUrl(url);
+        return request.send();
+    }
+}
+
+/// Represents an HTTP request with method, URL, headers, and body.
+class HttpRequest {
+    string method;
+    string url;
+    string body;
+    string contentType;
+
+    HttpRequest() {
+        this.method = "GET";
+        this.url = "";
+        this.body = "";
+        this.contentType = "application/json";
+    }
+
+    void setMethod(string method) {
+        this.method = method;
+    }
+
+    void setUrl(string url) {
+        this.url = url;
+    }
+
+    void setBody(string body) {
+        this.body = body;
+    }
+
+    void setContentType(string contentType) {
+        this.contentType = contentType;
+    }
+
+    /// Sends the request and returns the response body.
+    /// (Requires runtime socket support for actual network I/O)
+    string send() {
+        // Placeholder: runtime will implement actual HTTP via sockets
+        return "";
+    }
+}
+
+/// Represents an HTTP response with status code and body.
+class HttpResponse {
+    int statusCode;
+    string body;
+    string contentType;
+
+    HttpResponse(int statusCode, string body) {
+        this.statusCode = statusCode;
+        this.body = body;
+        this.contentType = "text/plain";
+    }
+
+    int getStatusCode() {
+        return this.statusCode;
+    }
+
+    string getBody() {
+        return this.body;
+    }
+
+    bool isSuccess() {
+        return this.statusCode >= 200 && this.statusCode < 300;
+    }
+
+    bool isError() {
+        return this.statusCode >= 400;
+    }
+}
